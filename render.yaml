@@ -4,5 +4,5 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn web_bias:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn web_bias:app --bind 0.0.0.0:$PORT --timeout 120
     autoDeploy: true

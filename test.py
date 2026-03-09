@@ -55,6 +55,11 @@ def load_news_sites(config_path=None):
 
 NEWS_SITES = load_news_sites()
 
+try:
+    SCRAPE_TIMEOUT_SECONDS = max(0.5, float(os.getenv('SCRAPE_TIMEOUT_SECONDS', '2.0')))
+except ValueError:
+    SCRAPE_TIMEOUT_SECONDS = 2.0
+
 # Common country names to search for (excluding the United States)
 COUNTRIES = [
     'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola',
@@ -102,7 +107,7 @@ def scrape_headlines(url):
     """Scrape headlines from a news site."""
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=SCRAPE_TIMEOUT_SECONDS)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         headlines = [h.get_text() for h in soup.find_all(['h1', 'h2', 'h3'])]
