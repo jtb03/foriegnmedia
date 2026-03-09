@@ -132,9 +132,9 @@
                 font-size: 1.45rem;
             }
             .chart-container {
-                height: 430px;
+                height: 520px;
                 padding: 14px;
-                padding-bottom: 52px;
+                padding-bottom: 18px;
                 margin-bottom: 18px;
             }
             .chart-container h2 {
@@ -250,6 +250,7 @@
 
         const initialLabels = topCountries.map(item => item[0]);
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const chartContainer = document.querySelector('.chart-container');
         const biasKeys = ['left', 'center', 'right', 'unknown'];
         const biasColors = {
             left: '#0073e6',
@@ -257,6 +258,14 @@
             right: '#e03e2d',
             unknown: '#64cb6c',
         };
+
+        // On mobile, use a horizontal chart and give each country row enough vertical space.
+        if (isMobile && chartContainer) {
+            const perBarHeight = 34;
+            const headerAndLegendSpace = 180;
+            const mobileHeight = (initialLabels.length * perBarHeight) + headerAndLegendSpace;
+            chartContainer.style.height = `${mobileHeight}px`;
+        }
 
         // Create the baseline datasets with placeholder order. We'll sort dynamically.
         const buildDataset = (label) => ({
@@ -309,23 +318,13 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                indexAxis: isMobile ? 'y' : 'x',
                 scales: {
                     x: {
-                        stacked: true,
-                        ticks: {
-                            autoSkip: true,
-                            maxTicksLimit: isMobile ? 5 : 10,
-                            minRotation: isMobile ? 30 : 0,
-                            maxRotation: isMobile ? 45 : 0,
-                            font: {
-                                size: isMobile ? 10 : 12,
-                            },
-                        },
-                    },
-                    y: {
                         beginAtZero: true,
                         stacked: true,
                         ticks: {
+                            autoSkip: false,
                             font: {
                                 size: isMobile ? 10 : 12,
                             },
@@ -334,6 +333,15 @@
                             display: true,
                             text: 'Count'
                         }
+                    },
+                    y: {
+                        stacked: true,
+                        ticks: {
+                            autoSkip: false,
+                            font: {
+                                size: isMobile ? 10 : 12,
+                            },
+                        },
                     }
                 },
                 plugins: {
@@ -344,7 +352,7 @@
                 },
                 layout: {
                     padding: {
-                        bottom: isMobile ? 18 : 0,
+                        bottom: isMobile ? 0 : 0,
                     },
                 }
             }
