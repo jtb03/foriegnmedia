@@ -124,6 +124,42 @@
         .site-section.is-hidden {
             display: none;
         }
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+            h1 {
+                font-size: 1.45rem;
+            }
+            .chart-container {
+                height: 320px;
+                padding: 14px;
+                padding-bottom: 24px;
+                margin-bottom: 24px;
+            }
+            .chart-container h2 {
+                font-size: 1rem;
+                margin-bottom: 10px;
+                line-height: 1.25;
+            }
+            .bias-legend {
+                gap: 10px 12px;
+                font-size: 0.82rem;
+                margin-bottom: 8px;
+            }
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .section {
+                padding: 14px;
+            }
+            .bias-title {
+                flex-wrap: wrap;
+            }
+            .site-selector {
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -213,6 +249,7 @@
         const biasCounts = {{ bias_country_counts | tojson }};
 
         const initialLabels = topCountries.map(item => item[0]);
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const biasKeys = ['left', 'center', 'right', 'unknown'];
         const biasColors = {
             left: '#0073e6',
@@ -275,10 +312,24 @@
                 scales: {
                     x: {
                         stacked: true,
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: isMobile ? 6 : 10,
+                            minRotation: isMobile ? 45 : 0,
+                            maxRotation: isMobile ? 60 : 0,
+                            font: {
+                                size: isMobile ? 10 : 12,
+                            },
+                        },
                     },
                     y: {
                         beginAtZero: true,
                         stacked: true,
+                        ticks: {
+                            font: {
+                                size: isMobile ? 10 : 12,
+                            },
+                        },
                         title: {
                             display: true,
                             text: 'Count'
