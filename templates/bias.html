@@ -32,6 +32,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             grid-column: 1 / -1;
             position: relative;
+            overflow: hidden;
             height: 400px;
             margin-bottom: 50px;
         }
@@ -132,9 +133,9 @@
                 font-size: 1.45rem;
             }
             .chart-container {
-                height: 320px;
+                height: 360px;
                 padding: 14px;
-                padding-bottom: 24px;
+                padding-bottom: 44px;
                 margin-bottom: 24px;
             }
             .chart-container h2 {
@@ -314,9 +315,9 @@
                         stacked: true,
                         ticks: {
                             autoSkip: true,
-                            maxTicksLimit: isMobile ? 6 : 10,
-                            minRotation: isMobile ? 45 : 0,
-                            maxRotation: isMobile ? 60 : 0,
+                            maxTicksLimit: isMobile ? 5 : 10,
+                            minRotation: isMobile ? 30 : 0,
+                            maxRotation: isMobile ? 45 : 0,
                             font: {
                                 size: isMobile ? 10 : 12,
                             },
@@ -341,6 +342,11 @@
                         mode: 'index',
                         intersect: false,
                     }
+                },
+                layout: {
+                    padding: {
+                        bottom: isMobile ? 10 : 0,
+                    },
                 }
             }
         });
