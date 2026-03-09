@@ -35,6 +35,14 @@
             height: 400px;
             margin-bottom: 50px;
         }
+        .chart-canvas-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 240px;
+        }
+        .chart-canvas-wrap canvas {
+            display: block;
+        }
         .section {
             background: white;
             padding: 20px;
@@ -137,6 +145,9 @@
                 padding-bottom: 18px;
                 margin-bottom: 18px;
             }
+            .chart-canvas-wrap {
+                min-height: 320px;
+            }
             .chart-container h2 {
                 font-size: 1rem;
                 margin-bottom: 10px;
@@ -173,7 +184,9 @@
             <label><input type="checkbox" data-bias="right" checked> <span class="legend-color" style="background:#e03e2d"></span> Right</label>
             <label><input type="checkbox" data-bias="unknown" checked> <span class="legend-color" style="background:#64cb6c"></span> Unknown</label>
         </div>
-        <canvas id="countryChart"></canvas>
+        <div class="chart-canvas-wrap" id="chartCanvasWrap">
+            <canvas id="countryChart"></canvas>
+        </div>
     </div>
 
     <div class="container">
@@ -251,6 +264,9 @@
         const initialLabels = topCountries.map(item => item[0]);
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const chartContainer = document.querySelector('.chart-container');
+        const chartCanvasWrap = document.getElementById('chartCanvasWrap');
+        const chartTitle = document.querySelector('.chart-container h2');
+        const biasLegend = document.getElementById('biasLegend');
         const biasKeys = ['left', 'center', 'right', 'unknown'];
         const biasColors = {
             left: '#0073e6',
@@ -266,6 +282,24 @@
             const mobileHeight = (initialLabels.length * perBarHeight) + headerAndLegendSpace;
             chartContainer.style.height = `${mobileHeight}px`;
         }
+
+        let chart;
+
+        const syncChartCanvasHeight = () => {
+            if (!chartContainer || !chartCanvasWrap || !chartTitle || !biasLegend) {
+                return;
+            }
+
+            const reservedHeight = chartTitle.offsetHeight + biasLegend.offsetHeight + 16;
+            const availableHeight = Math.max(220, chartContainer.clientHeight - reservedHeight);
+            chartCanvasWrap.style.height = `${availableHeight}px`;
+
+            if (chart) {
+                chart.resize();
+            }
+        };
+
+        syncChartCanvasHeight();
 
         // Create the baseline datasets with placeholder order. We'll sort dynamically.
         const buildDataset = (label) => ({
@@ -309,7 +343,7 @@
             chart.update();
         };
 
-        const chart = new Chart(ctx, {
+        chart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: initialLabels,
@@ -357,6 +391,8 @@
                 }
             }
         });
+
+        window.addEventListener('resize', syncChartCanvasHeight);
 
         document.querySelectorAll('#biasLegend input[type="checkbox"]').forEach(input => {
             input.addEventListener('change', () => {
