@@ -41,6 +41,9 @@ _sync_state = {
     'last_success_unix': None,
     'last_storage': None,
     'last_error': None,
+    'last_supabase_attempt_unix': None,
+    'last_supabase_success_unix': None,
+    'last_supabase_error': None,
 }
 
 
@@ -49,6 +52,8 @@ def mark_sync_attempt(storage):
     with _sync_lock:
         _sync_state['last_attempt_unix'] = int(time.time())
         _sync_state['last_storage'] = storage
+        if storage == 'supabase':
+            _sync_state['last_supabase_attempt_unix'] = int(time.time())
 
 
 def mark_sync_success(storage):
@@ -56,7 +61,13 @@ def mark_sync_success(storage):
     with _sync_lock:
         _sync_state['last_success_unix'] = int(time.time())
         _sync_state['last_storage'] = storage
-        _sync_state['last_error'] = None
+        # Only clear the generic error on success in the same storage path.
+        if storage == 'supabase':
+            _sync_state['last_error'] = None
+            _sync_state['last_supabase_success_unix'] = int(time.time())
+            _sync_state['last_supabase_error'] = None
+        elif _sync_state.get('last_storage') == 'local':
+            _sync_state['last_error'] = None
 
 
 def mark_sync_error(storage, error):
@@ -64,6 +75,8 @@ def mark_sync_error(storage, error):
     with _sync_lock:
         _sync_state['last_storage'] = storage
         _sync_state['last_error'] = str(error)
+        if storage == 'supabase':
+            _sync_state['last_supabase_error'] = str(error)
 
 
 def get_sync_state_snapshot():
@@ -598,6 +611,9 @@ def health():
         'sync_last_success_unix': sync_state.get('last_success_unix'),
         'sync_last_storage': sync_state.get('last_storage'),
         'sync_last_error': sync_state.get('last_error'),
+        'sync_last_supabase_attempt_unix': sync_state.get('last_supabase_attempt_unix'),
+        'sync_last_supabase_success_unix': sync_state.get('last_supabase_success_unix'),
+        'sync_last_supabase_error': sync_state.get('last_supabase_error'),
     })
 
 
