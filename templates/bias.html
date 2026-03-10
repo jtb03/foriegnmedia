@@ -136,6 +136,35 @@
         .site-section.is-hidden {
             display: none;
         }
+        .leaderboard-meta {
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 0.95rem;
+        }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e5e5e5;
+            text-align: left;
+        }
+        .leaderboard-table th {
+            color: #333;
+            background: #f4f6f8;
+            font-weight: 600;
+        }
+        .leaderboard-points {
+            font-weight: 700;
+            color: #0066cc;
+        }
+        .leaderboard-muted {
+            color: #666;
+            font-size: 0.88rem;
+        }
         @media (max-width: 768px) {
             body {
                 padding: 12px;
@@ -173,6 +202,9 @@
             }
             .site-selector {
                 max-width: 100%;
+            }
+            .leaderboard-table {
+                font-size: 0.88rem;
             }
         }
     </style>
@@ -226,6 +258,56 @@
             </div>
             {% endfor %}
         </div>
+    </div>
+
+    <div class="section">
+        <h2>Daily Country Leaderboard</h2>
+        <div class="leaderboard-meta">Date: {{ leaderboard_date }}. Points are assigned by daily mention rank (1st = 10 pts, 2nd = 9 pts, ...).</div>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Country</th>
+                    <th>Mentions</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in leaderboard %}
+                <tr>
+                    <td>#{{ row.rank }}</td>
+                    <td>{{ row.country }}</td>
+                    <td>{{ row.mentions }}</td>
+                    <td class="leaderboard-points">{{ row.points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Cumulative Country Leaderboard</h2>
+        <div class="leaderboard-meta">Built from {{ cumulative_days }} day{{ '' if cumulative_days == 1 else 's' }} of saved daily leaderboard results.</div>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Country</th>
+                    <th>Total Points</th>
+                    <th>Days Scored</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in cumulative_leaderboard %}
+                <tr>
+                    <td>#{{ row.rank }}</td>
+                    <td>{{ row.country }}</td>
+                    <td class="leaderboard-points">{{ row.points }}</td>
+                    <td><span class="leaderboard-muted">{{ row.days_scored }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
     <div class="section">
