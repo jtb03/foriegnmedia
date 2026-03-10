@@ -4,6 +4,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 from datetime import date, timedelta
+from uuid import uuid4
 import json
 import os
 import requests
@@ -221,6 +222,7 @@ def upsert_daily_points_supabase_legacy(leaderboard_date, leaderboard):
             endpoint,
             headers=supabase_headers(write_key, {'Prefer': 'return=minimal'}),
             json={
+                'id': str(uuid4()),
                 'user': country,
                 'points': points,
                 'updated_at': day_start,
