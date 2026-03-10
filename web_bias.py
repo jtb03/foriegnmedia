@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from test import NEWS_SITES, scrape_headlines, find_countries_in_text
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,6 +22,7 @@ _stats_cache = {
 }
 _cache_lock = Lock()
 _leaderboard_lock = Lock()
+_sync_lock = Lock()
 BIAS_ORDER = ('left', 'center', 'right')
 LEADERBOARD_SIZE = 10
 LEADERBOARD_STORE_PATH = os.getenv(
@@ -35,6 +36,40 @@ SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 SUPABASE_DAILY_TABLE = os.getenv('SUPABASE_DAILY_TABLE', 'country_leaderboard_daily')
 SUPABASE_COMPAT_MODE = os.getenv('SUPABASE_COMPAT_MODE', 'auto').strip().lower()
 SUPABASE_PAGE_SIZE = 1000
+_sync_state = {
+    'last_attempt_unix': None,
+    'last_success_unix': None,
+    'last_storage': None,
+    'last_error': None,
+}
+
+
+def mark_sync_attempt(storage):
+    """Record a leaderboard persistence attempt for debugging."""
+    with _sync_lock:
+        _sync_state['last_attempt_unix'] = int(time.time())
+        _sync_state['last_storage'] = storage
+
+
+def mark_sync_success(storage):
+    """Record a successful leaderboard persistence."""
+    with _sync_lock:
+        _sync_state['last_success_unix'] = int(time.time())
+        _sync_state['last_storage'] = storage
+        _sync_state['last_error'] = None
+
+
+def mark_sync_error(storage, error):
+    """Record an error during leaderboard persistence."""
+    with _sync_lock:
+        _sync_state['last_storage'] = storage
+        _sync_state['last_error'] = str(error)
+
+
+def get_sync_state_snapshot():
+    """Return an immutable copy of sync diagnostics."""
+    with _sync_lock:
+        return dict(_sync_state)
 
 
 def load_leaderboard_store():
@@ -69,6 +104,17 @@ def get_supabase_read_key():
 def get_supabase_write_key():
     """Return key used for writes, preferring service role key."""
     return SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY or SUPABASE_KEY
+
+
+def get_supabase_write_key_source():
+    """Return which env var currently provides the write key."""
+    if SUPABASE_SERVICE_ROLE_KEY:
+        return 'SUPABASE_SERVICE_ROLE_KEY'
+    if SUPABASE_ANON_KEY:
+        return 'SUPABASE_ANON_KEY'
+    if SUPABASE_KEY:
+        return 'SUPABASE_KEY'
+    return None
 
 
 def use_supabase_leaderboard_storage():
@@ -353,14 +399,19 @@ def update_and_get_cumulative_leaderboard(leaderboard_date, leaderboard):
     if use_supabase_leaderboard_storage():
         with _leaderboard_lock:
             try:
+                mark_sync_attempt('supabase')
                 upsert_daily_points_supabase(leaderboard_date, leaderboard)
-                return get_cumulative_leaderboard_from_supabase()
+                cumulative_data = get_cumulative_leaderboard_from_supabase()
+                mark_sync_success('supabase')
+                return cumulative_data
             except Exception as error:
+                mark_sync_error('supabase', error)
                 print(f"Supabase leaderboard fallback to local storage due to error: {error}")
 
     today_points = {row['country']: row['points'] for row in leaderboard}
 
     with _leaderboard_lock:
+        mark_sync_attempt('local')
         store = load_leaderboard_store()
         daily_points = store.get('daily_points', {})
         daily_points[leaderboard_date] = today_points
@@ -369,6 +420,7 @@ def update_and_get_cumulative_leaderboard(leaderboard_date, leaderboard):
 
         cumulative = build_cumulative_leaderboard(daily_points)
         tracked_days = len(daily_points)
+        mark_sync_success('local')
 
     return cumulative, tracked_days
 
@@ -494,6 +546,7 @@ def get_cached_bias_stats():
 @app.route('/')
 def index():
     """Display country statistics (with bias grouping)."""
+    force_refresh = request.args.get('refresh', '').strip().lower() in {'1', 'true', 'yes'}
     (
         top_countries,
         site_data,
@@ -503,7 +556,7 @@ def index():
         leaderboard_date,
         cumulative_leaderboard,
         tracked_days,
-    ) = get_cached_bias_stats()
+    ) = get_bias_stats() if force_refresh else get_cached_bias_stats()
     return render_template(
         'bias.html',
         top_countries=top_countries,
@@ -524,6 +577,7 @@ def health():
     with _cache_lock:
         has_cache = _stats_cache['data'] is not None
         cache_age_seconds = int(time.time() - _stats_cache['timestamp']) if has_cache else None
+    sync_state = get_sync_state_snapshot()
 
     return jsonify({
         'status': 'ok',
@@ -534,9 +588,16 @@ def health():
         'supabase_url_configured': bool(SUPABASE_URL),
         'supabase_read_key_configured': bool(get_supabase_read_key()),
         'supabase_write_key_configured': bool(get_supabase_write_key()),
+        'supabase_service_role_key_configured': bool(SUPABASE_SERVICE_ROLE_KEY),
+        'supabase_anon_key_configured': bool(SUPABASE_ANON_KEY),
+        'supabase_write_key_source': get_supabase_write_key_source(),
         'supabase_daily_table': SUPABASE_DAILY_TABLE,
         'supabase_compat_mode': SUPABASE_COMPAT_MODE,
         'supabase_legacy_schema_mode': use_legacy_leaderboard_schema(),
+        'sync_last_attempt_unix': sync_state.get('last_attempt_unix'),
+        'sync_last_success_unix': sync_state.get('last_success_unix'),
+        'sync_last_storage': sync_state.get('last_storage'),
+        'sync_last_error': sync_state.get('last_error'),
     })
 
 
