@@ -72,7 +72,11 @@
         .bias-left { background: #0073e6; }
         .bias-center { background: #6c757d; }
         .bias-right { background: #e03e2d; }
-        .bias-unknown { background: #64cb6c; }
+        .subsection-title {
+            color: #333;
+            margin: 18px 0 8px;
+            font-size: 1.05rem;
+        }
         .bias-legend {
             display: flex;
             gap: 16px;
@@ -182,7 +186,6 @@
             <label><input type="checkbox" data-bias="left" checked> <span class="legend-color" style="background:#0073e6"></span> Left</label>
             <label><input type="checkbox" data-bias="center" checked> <span class="legend-color" style="background:#6c757d"></span> Center</label>
             <label><input type="checkbox" data-bias="right" checked> <span class="legend-color" style="background:#e03e2d"></span> Right</label>
-            <label><input type="checkbox" data-bias="unknown" checked> <span class="legend-color" style="background:#64cb6c"></span> Unknown</label>
         </div>
         <div class="chart-canvas-wrap" id="chartCanvasWrap">
             <canvas id="countryChart"></canvas>
@@ -227,7 +230,10 @@
 
     <div class="section">
         <h2>Bias / Leaning Breakdown</h2>
-        {% for bias, info in bias_summary.items() %}
+
+        <h3 class="subsection-title">Totals by Political Lean</h3>
+        {% for bias in bias_order %}
+        {% set info = bias_summary[bias] %}
         <div class="bias-section">
             <div class="bias-title">
                 <div class="bias-label bias-{{ bias }}">{{ bias|title }}-leaning</div>
@@ -239,6 +245,18 @@
                 <li class="country-item">{{ country }} <span class="country-count">({{ count }})</span></li>
                 {% endfor %}
             </ul>
+
+        </div>
+        {% endfor %}
+
+        <h3 class="subsection-title">Source-by-Source Breakdown</h3>
+        {% for bias in bias_order %}
+        {% set info = bias_summary[bias] %}
+        <div class="bias-section">
+            <div class="bias-title">
+                <div class="bias-label bias-{{ bias }}">{{ bias|title }}-leaning</div>
+                <div>Breakdown by source</div>
+            </div>
 
             <div>
                 {% for site_name, countries in info.sites.items() %}
@@ -267,12 +285,11 @@
         const chartCanvasWrap = document.getElementById('chartCanvasWrap');
         const chartTitle = document.querySelector('.chart-container h2');
         const biasLegend = document.getElementById('biasLegend');
-        const biasKeys = ['left', 'center', 'right', 'unknown'];
+        const biasKeys = ['left', 'center', 'right'];
         const biasColors = {
             left: '#0073e6',
             center: '#6c757d',
             right: '#e03e2d',
-            unknown: '#64cb6c',
         };
 
         // On mobile, use a horizontal chart and give each country row enough vertical space.

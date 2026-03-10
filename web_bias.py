@@ -17,18 +17,19 @@ _stats_cache = {
     'data': None,
 }
 _cache_lock = Lock()
+BIAS_ORDER = ('left', 'center', 'right')
 
 
 def normalize_bias(bias):
-    """Normalize bias labels and map unexpected values to unknown."""
-    normalized = (bias or 'unknown').lower()
-    return normalized if normalized in {'left', 'center', 'right', 'unknown'} else 'unknown'
+    """Normalize bias labels and map unexpected values to center."""
+    normalized = (bias or 'center').lower()
+    return normalized if normalized in BIAS_ORDER else 'center'
 
 
 def scrape_site_country_counts(site_name, site_info):
     """Scrape one site and return aggregated country counts."""
     url = site_info.get('url') if isinstance(site_info, dict) else site_info
-    bias = site_info.get('bias') if isinstance(site_info, dict) else 'unknown'
+    bias = site_info.get('bias') if isinstance(site_info, dict) else 'center'
 
     headlines = scrape_headlines(url)
     site_countries = Counter()
@@ -53,13 +54,11 @@ def get_bias_stats():
         'left': Counter(),
         'center': Counter(),
         'right': Counter(),
-        'unknown': Counter(),
     }
     bias_sites = {
         'left': {},
         'center': {},
         'right': {},
-        'unknown': {},
     }
 
     site_results = {}
@@ -79,11 +78,11 @@ def get_bias_stats():
                 site_results[result_site_name] = (bias, site_countries)
             except Exception as error:
                 print(f"Error processing {site_name}: {error}")
-                site_results[site_name] = ('unknown', Counter())
+                site_results[site_name] = ('center', Counter())
 
     # Keep output ordering stable using NEWS_SITES declaration order.
     for site_name in NEWS_SITES.keys():
-        bias, site_countries = site_results.get(site_name, ('unknown', Counter()))
+        bias, site_countries = site_results.get(site_name, ('center', Counter()))
         all_countries.update(site_countries)
         site_data[site_name] = dict(site_countries.most_common(5))
         bias_totals[bias].update(site_countries)
@@ -93,16 +92,16 @@ def get_bias_stats():
     top_countries = all_countries.most_common(10)
     bias_summary = {
         bias: {
-            'top_countries': counter.most_common(5),
-            'sites': sites,
+            'top_countries': bias_totals[bias].most_common(5),
+            'sites': bias_sites[bias],
         }
-        for bias, (counter, sites) in zip(bias_totals.keys(), zip(bias_totals.values(), bias_sites.values()))
+        for bias in BIAS_ORDER
     }
 
     # Expose counts per bias for the top countries chart
     bias_country_counts = {
-        bias: dict(counter)
-        for bias, counter in bias_totals.items()
+        bias: dict(bias_totals[bias])
+        for bias in BIAS_ORDER
     }
 
     return top_countries, site_data, bias_summary, bias_country_counts
@@ -135,6 +134,7 @@ def index():
         site_data=site_data,
         bias_summary=bias_summary,
         bias_country_counts=bias_country_counts,
+        bias_order=BIAS_ORDER,
     )
 
 
